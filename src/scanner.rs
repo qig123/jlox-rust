@@ -1,4 +1,5 @@
 use crate::{
+    report,
     token::{Literal, Token},
     token_type::TokenType,
 };
@@ -8,10 +9,10 @@ pub struct Scanner {
 }
 
 impl Scanner {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Scanner { line: 1 }
     }
-    fn scan_tokens(&mut self, source: String) -> Vec<Token> {
+    pub fn scan_tokens(&mut self, source: String) -> Vec<Token> {
         let mut tokens = Vec::new();
         let mut chars = source.chars().peekable();
 
@@ -25,7 +26,82 @@ impl Scanner {
                         self.line,
                     ));
                 }
-                _ => {}
+                ')' => {
+                    tokens.push(Token::new(
+                        TokenType::RightParen,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                '{' => {
+                    tokens.push(Token::new(
+                        TokenType::LeftBrace,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                '}' => {
+                    tokens.push(Token::new(
+                        TokenType::RightBrace,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                ',' => {
+                    tokens.push(Token::new(
+                        TokenType::Comma,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                '.' => {
+                    tokens.push(Token::new(
+                        TokenType::Semicolon,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                '-' => {
+                    tokens.push(Token::new(
+                        TokenType::Minus,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                '+' => {
+                    tokens.push(Token::new(
+                        TokenType::Plus,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                ';' => {
+                    tokens.push(Token::new(
+                        TokenType::Semicolon,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                '*' => {
+                    tokens.push(Token::new(
+                        TokenType::Star,
+                        c.to_string(),
+                        Literal::NULL,
+                        self.line,
+                    ));
+                }
+                //处理前瞻一个字符的情况
+                _ => {
+                    report::error(self.line, "Unexpected character.");
+                }
             }
         }
         tokens.push(Token::new(
