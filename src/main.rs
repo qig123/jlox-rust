@@ -1,6 +1,9 @@
 use std::{env, fs};
 
+use parser::Parser;
 use scanner::Scanner;
+mod expr;
+mod parser;
 mod report;
 mod scanner;
 mod token;
@@ -24,7 +27,9 @@ fn run_file(path: String) {
 fn run(source: String) {
     let mut scanner = Scanner::new();
     let tokens = scanner.scan_tokens(source);
-    for t in &tokens {
-        println!("{:?}", t);
+    let mut parser = Parser::new(tokens);
+    match parser.parse() {
+        Ok(expr) => println!("Parsed expression: {}", expr),
+        Err(e) => eprintln!("Parse error: {:?}", e),
     }
 }

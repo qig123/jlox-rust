@@ -1,6 +1,6 @@
 use crate::{
     report,
-    token::{Literal, Token},
+    token::{Object, Token},
     token_type::TokenType,
 };
 #[derive(Debug)]
@@ -22,7 +22,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::LeftParen,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -30,7 +30,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::RightParen,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -38,7 +38,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::LeftBrace,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -46,7 +46,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::RightBrace,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -54,7 +54,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::Comma,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -62,7 +62,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::Dot,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -70,7 +70,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::Minus,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -78,7 +78,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::Plus,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -86,7 +86,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::Semicolon,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -94,7 +94,7 @@ impl Scanner {
                     tokens.push(Token::new(
                         TokenType::Star,
                         c.to_string(),
-                        Literal::NULL,
+                        Object::NULL,
                         self.line,
                     ));
                 }
@@ -107,7 +107,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::BangEqual,
                                 lexeme,
-                                Literal::NULL,
+                                Object::NULL,
                                 self.line,
                             ));
                             chars.next();
@@ -115,7 +115,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::Bang,
                                 c.to_string(),
-                                Literal::NULL,
+                                Object::NULL,
                                 self.line,
                             ));
                         }
@@ -129,7 +129,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::EqualEqual,
                                 lexeme,
-                                Literal::NULL,
+                                Object::NULL,
                                 self.line,
                             ));
                             chars.next();
@@ -137,7 +137,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::Equal,
                                 c.to_string(),
-                                Literal::NULL,
+                                Object::NULL,
                                 self.line,
                             ));
                         }
@@ -151,7 +151,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::GreaterEqual,
                                 lexeme,
-                                Literal::NULL,
+                                Object::NULL,
                                 self.line,
                             ));
                             chars.next();
@@ -159,7 +159,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::Greater,
                                 c.to_string(),
-                                Literal::NULL,
+                                Object::NULL,
                                 self.line,
                             ));
                         }
@@ -173,7 +173,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::LessEqual,
                                 lexeme,
-                                Literal::NULL,
+                                Object::NULL,
                                 self.line,
                             ));
                             chars.next();
@@ -181,7 +181,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::Less,
                                 c.to_string(),
-                                Literal::NULL,
+                                Object::NULL,
                                 self.line,
                             ));
                         }
@@ -200,7 +200,7 @@ impl Scanner {
                         tokens.push(Token::new(
                             TokenType::Slash,
                             c.to_string(),
-                            Literal::NULL,
+                            Object::NULL,
                             self.line,
                         ));
                     }
@@ -230,8 +230,8 @@ impl Scanner {
 
                         tokens.push(Token::new(
                             TokenType::String,
-                            string_content.clone(),          // 实际字符串内容
-                            Literal::String(string_content), // 存储为字面量
+                            string_content.clone(),         // 实际字符串内容
+                            Object::String(string_content), // 存储为字面量
                             self.line,
                         ));
                     }
@@ -270,7 +270,7 @@ impl Scanner {
                             tokens.push(Token::new(
                                 TokenType::Number,
                                 number_literal.clone(),
-                                Literal::Number(value),
+                                Object::Number(value),
                                 self.line,
                             ));
                         }
@@ -311,7 +311,7 @@ impl Scanner {
                         _ => TokenType::Identifier,
                     };
 
-                    tokens.push(Token::new(token_type, identifier, Literal::NULL, self.line));
+                    tokens.push(Token::new(token_type, identifier, Object::NULL, self.line));
                 }
 
                 _ => {
@@ -322,7 +322,7 @@ impl Scanner {
         tokens.push(Token::new(
             TokenType::Eof,
             "".to_string(),
-            Literal::NULL,
+            Object::NULL,
             self.line,
         ));
         tokens

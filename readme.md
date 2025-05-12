@@ -5,3 +5,13 @@ jlox解释器的 Rust版本，
    * 为了简单，解释器只接收文件作为输入 
 * 错误处理
   理论上应该用Result<T,E>返回，但是为了简单，直接Panic或者expected
+
+expression     → equality ;
+equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term           → factor ( ( "-" | "+" ) factor )* ;
+factor         → unary ( ( "/" | "*" ) unary )* ;
+unary          → ( "!" | "-" ) unary
+               | primary ;
+primary        → NUMBER | STRING | "true" | "false" | "nil"
+               | "(" expression ")" ;

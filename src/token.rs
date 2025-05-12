@@ -1,6 +1,6 @@
 use crate::token_type::TokenType;
 #[derive(Debug, Clone)]
-pub enum Literal {
+pub enum Object {
     String(String),
     NULL,
     Number(f64),
@@ -8,13 +8,13 @@ pub enum Literal {
 }
 #[derive(Debug, Clone)]
 pub struct Token {
-    token_type: TokenType,
-    lexeme: String,
-    literal: Literal,
-    line: usize,
+    pub token_type: TokenType,
+    pub lexeme: String,
+    pub literal: Object,
+    pub line: usize,
 }
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, literal: Literal, line: usize) -> Self {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Object, line: usize) -> Self {
         Self {
             token_type,
             lexeme,
