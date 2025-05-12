@@ -1,6 +1,2 @@
-// this is a comment
-(( )){} // grouping stuff
 
-
-
-!*+-/=<> <= == // operators
+var abc = 5 ;
