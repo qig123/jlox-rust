@@ -60,7 +60,7 @@ impl Scanner {
                 }
                 '.' => {
                     tokens.push(Token::new(
-                        TokenType::Semicolon,
+                        TokenType::Dot,
                         c.to_string(),
                         Literal::NULL,
                         self.line,
@@ -99,6 +99,117 @@ impl Scanner {
                     ));
                 }
                 //处理前瞻一个字符的情况
+                '!' => {
+                    if let Some(&next_char) = chars.peek() {
+                        if next_char == '=' {
+                            let mut lexeme = c.to_string();
+                            lexeme.push(next_char);
+                            tokens.push(Token::new(
+                                TokenType::BangEqual,
+                                lexeme,
+                                Literal::NULL,
+                                self.line,
+                            ));
+                            chars.next();
+                        } else {
+                            tokens.push(Token::new(
+                                TokenType::Bang,
+                                c.to_string(),
+                                Literal::NULL,
+                                self.line,
+                            ));
+                        }
+                    }
+                }
+                '=' => {
+                    if let Some(&next_char) = chars.peek() {
+                        if next_char == '=' {
+                            let mut lexeme = c.to_string();
+                            lexeme.push(next_char);
+                            tokens.push(Token::new(
+                                TokenType::EqualEqual,
+                                lexeme,
+                                Literal::NULL,
+                                self.line,
+                            ));
+                            chars.next();
+                        } else {
+                            tokens.push(Token::new(
+                                TokenType::Equal,
+                                c.to_string(),
+                                Literal::NULL,
+                                self.line,
+                            ));
+                        }
+                    }
+                }
+                '>' => {
+                    if let Some(&next_char) = chars.peek() {
+                        if next_char == '=' {
+                            let mut lexeme = c.to_string();
+                            lexeme.push(next_char);
+                            tokens.push(Token::new(
+                                TokenType::GreaterEqual,
+                                lexeme,
+                                Literal::NULL,
+                                self.line,
+                            ));
+                            chars.next();
+                        } else {
+                            tokens.push(Token::new(
+                                TokenType::Greater,
+                                c.to_string(),
+                                Literal::NULL,
+                                self.line,
+                            ));
+                        }
+                    }
+                }
+                '<' => {
+                    if let Some(&next_char) = chars.peek() {
+                        if next_char == '=' {
+                            let mut lexeme = c.to_string();
+                            lexeme.push(next_char);
+                            tokens.push(Token::new(
+                                TokenType::LessEqual,
+                                lexeme,
+                                Literal::NULL,
+                                self.line,
+                            ));
+                            chars.next();
+                        } else {
+                            tokens.push(Token::new(
+                                TokenType::Less,
+                                c.to_string(),
+                                Literal::NULL,
+                                self.line,
+                            ));
+                        }
+                    }
+                }
+                '/' => {
+                    if let Some(&'/') = chars.peek() {
+                        // 单行注释处理
+                        while let Some(&next_char) = chars.peek() {
+                            if next_char == '\n' {
+                                break;
+                            }
+                            chars.next();
+                        }
+                    } else {
+                        tokens.push(Token::new(
+                            TokenType::Slash,
+                            c.to_string(),
+                            Literal::NULL,
+                            self.line,
+                        ));
+                    }
+                }
+                ' ' | '\r' | '\t' => {}
+                '\n' => {
+                    self.line += 1;
+                }
+
                 _ => {
                     report::error(self.line, "Unexpected character.");
                 }
