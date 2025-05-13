@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     environment::Environment,
     expr::{Expr, Stmt},
@@ -173,7 +175,26 @@ impl Interpreter {
                 self.environment.define(name.lexeme, value);
                 Ok(Object::NULL)
             }
+            Stmt::Block { statements } => self.execute_block(
+                statements,
+                Environment::new_with_enclosing(Rc::new(RefCell::new(self.environment.clone()))), //这里应该怎样写
+            ),
         }
+    }
+    fn execute_block(
+        &mut self,
+        statements: Vec<Stmt>,
+        environment: Environment,
+    ) -> Result<Object, RuntimeError> {
+        let previous = std::mem::replace(&mut self.environment, environment);
+        let result = (|| {
+            for stmt in statements {
+                self.interpret_stmt(stmt)?;
+            }
+            Ok(Object::NULL)
+        })(); // 立即执行闭包
+        self.environment = previous; // 无论如何都会恢复
+        result
     }
     // 辅助函数：判断一个值是否为真
     fn is_truthy(obj: &Object) -> bool {

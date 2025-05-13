@@ -72,7 +72,18 @@ impl Parser {
         if self.match_token(&[TokenType::Print]) {
             return self.print_statement();
         }
+        if self.match_token(&[TokenType::LeftBrace]) {
+            return self.block_statement();
+        }
         self.expression_statement()
+    }
+    fn block_statement(&mut self) -> Result<Stmt, ParseError> {
+        let mut statements = Vec::new();
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+        self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
+        Ok(Stmt::Block { statements })
     }
     fn assignment(&mut self) -> Result<Expr, ParseError> {
         // 1. 先解析等号左边的表达式（可能是变量或其他表达式）
