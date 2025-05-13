@@ -5,3 +5,5 @@ if (x > 5) {
 } else {
   print "x is less than or equal to 5";
 }
+print "hi" or 2; // "hi".
+print nil or "yes"; // "yes".

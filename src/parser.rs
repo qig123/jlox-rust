@@ -106,7 +106,7 @@ impl Parser {
     }
     fn assignment(&mut self) -> Result<Expr, ParseError> {
         // 1. 先解析等号左边的表达式（可能是变量或其他表达式）
-        let expr = self.equality()?;
+        let expr = self.logical_or()?;
 
         // 2. 检查当前token是否是等号（表示这是一个赋值语句）
         if self.match_token(&[TokenType::Equal]) {
@@ -137,6 +137,33 @@ impl Parser {
         // 5. 如果不是赋值语句，直接返回解析的表达式
         Ok(expr)
     }
+    fn logical_or(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.logical_and()?;
+        while self.match_token(&[TokenType::Or]) {
+            let operator = self.previous().clone();
+            let right_expr = self.logical_and()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right_expr),
+            };
+        }
+        Ok(expr)
+    }
+    fn logical_and(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.equality()?;
+        while self.match_token(&[TokenType::And]) {
+            let operator = self.previous().clone();
+            let right_expr = self.equality()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right_expr),
+            };
+        }
+        Ok(expr)
+    }
+
     fn print_statement(&mut self) -> Result<Stmt, ParseError> {
         let value = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;

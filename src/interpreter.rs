@@ -157,6 +157,24 @@ impl Interpreter {
                 let value = self.interpret_expr(*value)?;
                 self.environment.assign(name, value)
             }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.interpret_expr(*left)?;
+                if operator.token_type == TokenType::Or {
+                    if Self::is_truthy(&left) {
+                        return Ok(left);
+                    }
+                } else {
+                    if !Self::is_truthy(&left) {
+                        return Ok(left);
+                    }
+                }
+                let right = self.interpret_expr(*right)?;
+                Ok(right)
+            }
         }
     }
     pub fn interpret_stmt(&mut self, stmt: Stmt) -> Result<Object, RuntimeError> {
