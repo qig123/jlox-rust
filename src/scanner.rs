@@ -6,17 +6,27 @@ use crate::{
 #[derive(Debug)]
 pub struct Scanner {
     line: usize,
+    column: usize,
+    source_lines: Vec<String>,
 }
 
 impl Scanner {
     pub fn new() -> Self {
-        Scanner { line: 1 }
+        Scanner {
+            line: 1,
+            column: 0,
+            source_lines: Vec::new(),
+        }
     }
     pub fn scan_tokens(&mut self, source: String) -> Result<Vec<Token>, ()> {
+        self.column = 0;
+        // 在开始扫描前，先把源代码按行分割并存储
+        self.source_lines = source.lines().map(String::from).collect();
         let mut tokens = Vec::new();
         let mut chars = source.chars().peekable();
         let mut had_error = false;
         while let Some(c) = chars.next() {
+            self.column += 1;
             match c {
                 '(' => {
                     tokens.push(Token::new(
@@ -111,6 +121,7 @@ impl Scanner {
                                 self.line,
                             ));
                             chars.next();
+                            self.column += 1;
                         } else {
                             tokens.push(Token::new(
                                 TokenType::Bang,
@@ -133,6 +144,7 @@ impl Scanner {
                                 self.line,
                             ));
                             chars.next();
+                            self.column += 1;
                         } else {
                             tokens.push(Token::new(
                                 TokenType::Equal,
@@ -155,6 +167,7 @@ impl Scanner {
                                 self.line,
                             ));
                             chars.next();
+                            self.column += 1;
                         } else {
                             tokens.push(Token::new(
                                 TokenType::Greater,
@@ -177,6 +190,7 @@ impl Scanner {
                                 self.line,
                             ));
                             chars.next();
+                            self.column += 1;
                         } else {
                             tokens.push(Token::new(
                                 TokenType::Less,
@@ -195,6 +209,7 @@ impl Scanner {
                                 break;
                             }
                             chars.next();
+                            self.column += 1;
                         }
                     } else {
                         tokens.push(Token::new(
@@ -208,32 +223,51 @@ impl Scanner {
                 ' ' | '\r' | '\t' => {}
                 '\n' => {
                     self.line += 1;
+                    self.column = 0;
                 }
                 '"' => {
+                    let start_line = self.line; // 记录字符串开始时的行号
+                    let start_column = self.column;
                     let mut string_content = String::new();
+                    let mut current_line = self.line; // 用于跟踪当前扫描到的行
+
                     // 处理字符串内容
                     while let Some(&next_char) = chars.peek() {
                         if next_char == '"' {
                             break; // 找到闭合引号
                         }
                         if next_char == '\n' {
+                            current_line += 1;
                             self.line += 1;
+                            self.column = 0;
                         }
-                        string_content.push(chars.next().unwrap()); // 消费字符并添加到内容
+                        string_content.push(chars.next().unwrap());
+                        self.column += 1;
                     }
+
                     // 检查是否到达文件末尾而未闭合
                     if chars.peek().is_none() {
-                        report::error(self.line, "Unterminated string.");
+                        // 构建包含所有相关行的错误上下文
+                        let context_lines: Vec<String> = (start_line..=current_line)
+                            .filter_map(|line_num| self.source_lines.get(line_num - 1).cloned())
+                            .collect();
+
+                        report::report_error_multiline(
+                            start_line,     // 字符串开始的行号
+                            &context_lines, // 所有相关行的内容
+                            start_column,   // 字符串开始的列号
+                            "Unterminated string - string starts here and never closes",
+                        );
                         had_error = true;
                     } else {
                         // 消费闭合引号
                         chars.next();
-
+                        self.column += 1;
                         tokens.push(Token::new(
                             TokenType::String,
-                            string_content.clone(),         // 实际字符串内容
-                            Object::String(string_content), // 存储为字面量
-                            self.line,
+                            string_content.clone(),
+                            Object::String(string_content),
+                            start_line, // 使用字符串开始时的行号
                         ));
                     }
                 }
@@ -244,6 +278,7 @@ impl Scanner {
                     while let Some(&next_char) = chars.peek() {
                         if next_char.is_ascii_digit() {
                             number_literal.push(chars.next().unwrap());
+                            self.column += 1;
                         } else {
                             break;
                         }
@@ -253,11 +288,12 @@ impl Scanner {
                         if let Some(next_next_char) = chars.clone().nth(1) {
                             if next_next_char.is_ascii_digit() {
                                 number_literal.push(chars.next().unwrap()); // 消费 '.'
-
+                                self.column += 1;
                                 // 收集小数部分
                                 while let Some(&next_char) = chars.peek() {
                                     if next_char.is_ascii_digit() {
                                         number_literal.push(chars.next().unwrap());
+                                        self.column += 1;
                                     } else {
                                         break;
                                     }
@@ -276,7 +312,12 @@ impl Scanner {
                             ));
                         }
                         Err(_) => {
-                            report::error(self.line, "Invalid number literal.");
+                            report::report_error(
+                                self.line,
+                                &self.source_lines,
+                                self.column,
+                                "Invalid number literal.",
+                            );
                             had_error = true;
                         }
                     }
@@ -288,6 +329,7 @@ impl Scanner {
                     while let Some(&next_char) = chars.peek() {
                         if Scanner::is_alpha_numeric(next_char) {
                             identifier.push(chars.next().unwrap());
+                            self.column += 1;
                         } else {
                             break;
                         }
@@ -317,7 +359,12 @@ impl Scanner {
                 }
 
                 _ => {
-                    report::error(self.line, "Unexpected character.");
+                    report::report_error(
+                        self.line,
+                        &self.source_lines,
+                        self.column,
+                        "Unexpected character.",
+                    );
                     had_error = true;
                 }
             }
