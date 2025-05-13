@@ -1,8 +1,7 @@
-// No initializers.
-var a;
-var b;
+var x = 1;
 
-a = "assigned";
-print a; // OK, was assigned first.
-
-print b; // Error!
+if (x > 5) {
+  print "x is greater than 5";
+} else {
+  print "x is less than or equal to 5";
+}

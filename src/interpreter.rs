@@ -179,6 +179,19 @@ impl Interpreter {
                 statements,
                 Environment::new_with_enclosing(Rc::new(RefCell::new(self.environment.clone()))), //这里应该怎样写
             ),
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let condition = self.interpret_expr(condition)?;
+                if Self::is_truthy(&condition) {
+                    self.interpret_stmt(*then_branch)?;
+                } else if let Some(else_branch) = else_branch {
+                    self.interpret_stmt(*else_branch)?;
+                }
+                Ok(Object::NULL)
+            }
         }
     }
     fn execute_block(
