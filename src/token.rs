@@ -1,10 +1,11 @@
 use crate::token_type::TokenType;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Object {
     String(String),
     NULL,
     Number(f64),
     Boolean(bool),
+    Uninitialized,
 }
 #[derive(Debug, Clone)]
 pub struct Token {

@@ -170,7 +170,7 @@ impl Interpreter {
             Stmt::Var { name, initializer } => {
                 let value = match initializer {
                     Some(expr) => self.interpret_expr(expr)?,
-                    None => Object::NULL,
+                    None => Object::Uninitialized,
                 };
                 self.environment.define(name.lexeme, value);
                 Ok(Object::NULL)
@@ -220,6 +220,7 @@ impl Interpreter {
             Object::String(value) => value.clone(),
             Object::Boolean(value) => value.to_string(),
             Object::NULL => "null".to_string(),
+            Object::Uninitialized => "uninitialized".to_string(),
         }
     }
 }

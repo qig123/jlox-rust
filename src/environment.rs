@@ -27,7 +27,13 @@ impl Environment {
     }
     pub fn get(&self, name: Token) -> Result<Object, RuntimeError> {
         if let Some(value) = self.values.get(&name.lexeme) {
-            Ok(value.clone())
+            match value {
+                Object::Uninitialized => Err(RuntimeError {
+                    message: format!("Variable '{}' must be initialized before use", name.lexeme),
+                    line: name.line,
+                }),
+                _ => Ok(value.clone()),
+            }
         } else if let Some(enclosing) = &self.enclosing {
             enclosing.borrow().get(name)
         } else {
