@@ -7,18 +7,21 @@ use crate::{
 #[derive(Debug)]
 pub struct ParseError {
     pub message: String,
-    pub token: Token,
+    pub line: usize,
+    pub column: usize,
 }
 
 pub struct Parser {
     current: usize,
     tokens: Vec<Token>,
+    source_lines: Vec<String>,
 }
 impl Parser {
-    pub fn new(t: Vec<Token>) -> Self {
+    pub fn new(t: Vec<Token>, source: String) -> Self {
         Parser {
             current: 0,
             tokens: t,
+            source_lines: source.lines().map(String::from).collect(),
         }
     }
     pub fn parse(&mut self) -> Result<Vec<Stmt>, ()> {
@@ -30,7 +33,7 @@ impl Parser {
             match self.statement() {
                 Ok(stmt) => statements.push(stmt),
                 Err(err) => {
-                    report::report(err.token.line, &err.token.lexeme, &err.message); // 报告错误
+                    report::report_error(err.line, &self.source_lines, err.column, &err.message);
                     self.synchronize(); // 同步恢复
                     had_error = true; // 标记出错
                 }
@@ -59,7 +62,7 @@ impl Parser {
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Stmt::Expression(expr))
     }
-    //遇到解析错误（ParseError）后，让解析器“对齐”到下一个合理的语句起点，从而继续解析剩余代码，而不是整个程序直接中断。
+    //遇到解析错误（ParseError）后，让解析器"对齐"到下一个合理的语句起点，从而继续解析剩余代码，而不是整个程序直接中断。
     fn synchronize(&mut self) {
         self.advance();
         while !self.is_at_end() {
@@ -209,38 +212,51 @@ impl Parser {
             return match &prev.literal {
                 Object::Number(n) => Ok(Expr::Literal(Object::Number(*n))),
                 Object::String(s) => Ok(Expr::Literal(Object::String(s.clone()))),
-                _ => {
-                    report::error(prev.line, "Expected number or string literal at line ");
-                    Err(ParseError {
-                        message: "Expected number or string literal at line".to_string(),
-                        token: prev.clone(),
-                    })
-                }
+                _ => Err(ParseError {
+                    message: "Expected number or string literal at line".to_string(),
+                    line: prev.line,
+                    column: prev.column,
+                }),
             };
         }
         // 处理分组表达式
         if self.match_token(&[TokenType::LeftParen]) {
             let expr = self.expression()?;
-            self.consume(TokenType::RightParen, "Expect ')' after expression.")?;
+            self.consume(TokenType::RightParen, "Expect ')' after expression.")?; //语法分析，这里能否也显示一下出错字符串的位置
             return Ok(Expr::Grouping(Box::new(expr)));
         }
         // 如果没有匹配到任何情况，返回错误
         let token = self.peek();
-        report::error(token.line, "Expected expression at line");
+
         Err(ParseError {
             message: "Expected expression at line".to_string(),
-            token: token.clone(),
+            line: token.line,
+            column: token.column,
         })
     }
 
-    // 需要添加的 consume 方法
-    fn consume(&mut self, t: TokenType, message: &str) -> Result<&Token, ParseError> {
-        if self.check(t) {
+    // 检查当前 token 是否是我们期望的类型
+    // 如果是，就消费掉这个 token（移动到下一个）
+    // 如果不是，就报告一个语法错误
+    // 举个例子，对于这样的表达式：(1 + 2
+    // 当解析到 2 后，我们会调用 consume(TokenType::RightParen, "Expect ')' after expression.")
+    // 如果当前 token 是 TokenType::RightParen，就消费掉这个 token，并返回 Ok(token)
+    // 如果当前 token 不是 TokenType::RightParen，就报告一个语法错误，并返回 Err(ParseError)
+    fn consume(&mut self, expected_type: TokenType, message: &str) -> Result<&Token, ParseError> {
+        let current_token = self.peek();
+        if self.check(expected_type) {
             Ok(self.advance())
         } else {
+            // 获取上一个token的位置，这个位置更准确地表示了错误发生的地方
+            let prev_token = self.previous();
+
+            // 构造更有信息量的错误消息
+            let error_message = format!("{} (found '{}' instead)", message, current_token.lexeme);
+
             Err(ParseError {
-                message: message.to_string(),
-                token: self.peek().clone(),
+                message: error_message,
+                line: prev_token.line, // 使用上一个token的位置
+                column: prev_token.column + prev_token.lexeme.len(), // 在上一个token之后
             })
         }
     }

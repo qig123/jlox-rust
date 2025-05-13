@@ -1,7 +1,3 @@
-pub fn error(line: usize, message: &str) {
-    report(line, "", message);
-}
-
 pub fn report_error_multiline(
     start_line: usize,
     context_lines: &[String],
@@ -26,10 +22,6 @@ pub fn report_error_multiline(
     }
     // 在最后一行后面显示 "never closes" 提示
     eprintln!("     | {}", "... string never closes");
-}
-
-pub fn report(line: usize, where_: &str, msg: &str) {
-    eprintln!("[line {}] Error {} : {}", line, where_, msg);
 }
 
 pub fn report_error(line: usize, source_lines: &[String], column: usize, message: &str) {

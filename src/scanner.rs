@@ -34,6 +34,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 ')' => {
@@ -42,6 +43,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 '{' => {
@@ -50,6 +52,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 '}' => {
@@ -58,6 +61,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 ',' => {
@@ -66,6 +70,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 '.' => {
@@ -74,6 +79,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 '-' => {
@@ -82,6 +88,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 '+' => {
@@ -90,6 +97,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 ';' => {
@@ -98,6 +106,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 '*' => {
@@ -106,6 +115,7 @@ impl Scanner {
                         c.to_string(),
                         Object::NULL,
                         self.line,
+                        self.column,
                     ));
                 }
                 //处理前瞻一个字符的情况
@@ -119,6 +129,7 @@ impl Scanner {
                                 lexeme,
                                 Object::NULL,
                                 self.line,
+                                self.column,
                             ));
                             chars.next();
                             self.column += 1;
@@ -128,6 +139,7 @@ impl Scanner {
                                 c.to_string(),
                                 Object::NULL,
                                 self.line,
+                                self.column,
                             ));
                         }
                     }
@@ -142,6 +154,7 @@ impl Scanner {
                                 lexeme,
                                 Object::NULL,
                                 self.line,
+                                self.column,
                             ));
                             chars.next();
                             self.column += 1;
@@ -151,6 +164,7 @@ impl Scanner {
                                 c.to_string(),
                                 Object::NULL,
                                 self.line,
+                                self.column,
                             ));
                         }
                     }
@@ -165,6 +179,7 @@ impl Scanner {
                                 lexeme,
                                 Object::NULL,
                                 self.line,
+                                self.column,
                             ));
                             chars.next();
                             self.column += 1;
@@ -174,6 +189,7 @@ impl Scanner {
                                 c.to_string(),
                                 Object::NULL,
                                 self.line,
+                                self.column,
                             ));
                         }
                     }
@@ -188,6 +204,7 @@ impl Scanner {
                                 lexeme,
                                 Object::NULL,
                                 self.line,
+                                self.column,
                             ));
                             chars.next();
                             self.column += 1;
@@ -197,6 +214,7 @@ impl Scanner {
                                 c.to_string(),
                                 Object::NULL,
                                 self.line,
+                                self.column,
                             ));
                         }
                     }
@@ -217,6 +235,7 @@ impl Scanner {
                             c.to_string(),
                             Object::NULL,
                             self.line,
+                            self.column,
                         ));
                     }
                 }
@@ -267,7 +286,8 @@ impl Scanner {
                             TokenType::String,
                             string_content.clone(),
                             Object::String(string_content),
-                            start_line, // 使用字符串开始时的行号
+                            start_line,
+                            start_column,
                         ));
                     }
                 }
@@ -309,6 +329,7 @@ impl Scanner {
                                 number_literal.clone(),
                                 Object::Number(value),
                                 self.line,
+                                self.column,
                             ));
                         }
                         Err(_) => {
@@ -355,7 +376,13 @@ impl Scanner {
                         _ => TokenType::Identifier,
                     };
 
-                    tokens.push(Token::new(token_type, identifier, Object::NULL, self.line));
+                    tokens.push(Token::new(
+                        token_type,
+                        identifier,
+                        Object::NULL,
+                        self.line,
+                        self.column,
+                    ));
                 }
 
                 _ => {
@@ -374,6 +401,7 @@ impl Scanner {
             "".to_string(),
             Object::NULL,
             self.line,
+            self.column,
         ));
         if had_error { Err(()) } else { Ok(tokens) }
     }

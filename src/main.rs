@@ -10,7 +10,7 @@ mod scanner;
 mod token;
 mod token_type;
 fn main() {
-    //  let args: Vec<String> = env::args().collect();
+    // let args: Vec<String> = env::args().collect();
     let args: Vec<&'static str> = vec!["name", r"./test.lox"]; //这行是测试代码
     match args.len() {
         2 => {
@@ -27,10 +27,10 @@ fn run_file(path: String) {
 }
 fn run(source: String) {
     let mut scanner = Scanner::new();
-    let tokens = scanner.scan_tokens(source);
+    let tokens = scanner.scan_tokens(source.clone()); // Clone source for parser
     match tokens {
         Ok(tokens) => {
-            let mut parser = Parser::new(tokens);
+            let mut parser = Parser::new(tokens, source); // Pass source to parser
             match parser.parse() {
                 Ok(expr) => match interpreter::interpret(expr) {
                     Ok(_obj) => {}
