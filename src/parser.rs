@@ -5,7 +5,10 @@ use crate::{
     token_type::TokenType,
 };
 #[derive(Debug)]
-pub struct ParseError {}
+pub struct ParseError {
+    pub message: String,
+    pub line: usize,
+}
 
 pub struct Parser {
     current: usize,
@@ -18,11 +21,33 @@ impl Parser {
             tokens: t,
         }
     }
-    pub fn parse(&mut self) -> Result<Expr, ParseError> {
-        self.expression()
+    //
+    pub fn parse(&mut self) -> Result<Expr, bool> {
+        self.expression().map_err(|err| {
+            report::error(err.line, &err.message);
+            self.synchronize();
+            false  
+        })
     }
+   //遇到解析错误（ParseError）后，让解析器“对齐”到下一个合理的语句起点，从而继续解析剩余代码，而不是整个程序直接中断。
+    fn synchronize(&mut self) {
+        self.advance();
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::Semicolon {
+                return;
+            }
+            match self.peek().token_type {
+                TokenType::Class | TokenType::Fun | TokenType::Var | TokenType::For | TokenType::If | TokenType::While | TokenType::Print | TokenType::Return => {
+                    return;
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+    }   
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.comparison()
+       self.equality()
     }
 
     fn match_token(&mut self, types: &[TokenType]) -> bool {
@@ -149,7 +174,7 @@ impl Parser {
                 Object::String(s) => Ok(Expr::Literal(Object::String(s.clone()))),
                 _ => {
                     report::error(prev.line, "Expected number or string literal at line ");
-                    Err(ParseError {})
+                    Err(ParseError { message: "Expected number or string literal at line".to_string(), line: prev.line })
                 }
             };
         }
@@ -162,7 +187,7 @@ impl Parser {
         // 如果没有匹配到任何情况，返回错误
         let token = self.peek();
         report::error(token.line, "Expected expression at line");
-        Err(ParseError {})
+        Err(ParseError { message: "Expected expression at line".to_string(), line: token.line })
     }
 
     // 需要添加的 consume 方法
@@ -170,7 +195,7 @@ impl Parser {
         if self.check(t) {
             Ok(self.advance())
         } else {
-            Err(ParseError {})
+            Err(ParseError { message: message.to_string(), line: self.peek().line })
         }
     }
 }
