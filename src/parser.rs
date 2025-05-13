@@ -46,6 +46,7 @@ impl Parser {
             Ok(statements) // 全部成功
         }
     }
+
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
         if self.match_token(&[TokenType::Var]) {
             return self.var_declaration();
@@ -72,6 +73,39 @@ impl Parser {
             return self.print_statement();
         }
         self.expression_statement()
+    }
+    fn assignment(&mut self) -> Result<Expr, ParseError> {
+        // 1. 先解析等号左边的表达式（可能是变量或其他表达式）
+        let expr = self.equality()?;
+
+        // 2. 检查当前token是否是等号（表示这是一个赋值语句）
+        if self.match_token(&[TokenType::Equal]) {
+            // 3. 递归解析等号右边的表达式
+            let value = self.assignment()?;
+            let equals = self.previous(); // 获取等号token用于错误定位
+
+            // 4. 检查左边表达式是否是变量（唯一合法的赋值目标）
+            match expr {
+                Expr::Variable(name) => {
+                    // 合法情况：创建赋值表达式节点
+                    return Ok(Expr::Assign {
+                        name,                   // 变量名
+                        value: Box::new(value), // 要赋的值
+                    });
+                }
+                _ => {
+                    // 非法情况：左边不是变量（如 `1+1 = 2` 这种非法语法）
+                    return Err(ParseError {
+                        message: "Invalid assignment target.".to_string(),
+                        line: equals.line,
+                        column: equals.column,
+                    });
+                }
+            }
+        }
+
+        // 5. 如果不是赋值语句，直接返回解析的表达式
+        Ok(expr)
     }
     fn print_statement(&mut self) -> Result<Stmt, ParseError> {
         let value = self.expression()?;
@@ -108,7 +142,7 @@ impl Parser {
         }
     }
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.equality()
+        self.assignment()
     }
 
     fn match_token(&mut self, types: &[TokenType]) -> bool {

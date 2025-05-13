@@ -26,4 +26,15 @@ impl Environment {
                 line: name.line,
             })
     }
+    pub fn assign(&mut self, name: Token, value: Object) -> Result<Object, RuntimeError> {
+        if self.values.contains_key(&name.lexeme) {
+            self.values.insert(name.lexeme, value.clone());
+            Ok(value.clone())
+        } else {
+            Err(RuntimeError {
+                message: format!("Undefined variable '{}'", name.lexeme),
+                line: name.line,
+            })
+        }
+    }
 }
