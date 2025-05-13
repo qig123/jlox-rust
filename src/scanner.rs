@@ -12,10 +12,10 @@ impl Scanner {
     pub fn new() -> Self {
         Scanner { line: 1 }
     }
-    pub fn scan_tokens(&mut self, source: String) -> Vec<Token> {
+    pub fn scan_tokens(&mut self, source: String) -> Result<Vec<Token>, ()> {
         let mut tokens = Vec::new();
         let mut chars = source.chars().peekable();
-
+        let mut had_error = false;
         while let Some(c) = chars.next() {
             match c {
                 '(' => {
@@ -224,6 +224,7 @@ impl Scanner {
                     // 检查是否到达文件末尾而未闭合
                     if chars.peek().is_none() {
                         report::error(self.line, "Unterminated string.");
+                        had_error = true;
                     } else {
                         // 消费闭合引号
                         chars.next();
@@ -276,6 +277,7 @@ impl Scanner {
                         }
                         Err(_) => {
                             report::error(self.line, "Invalid number literal.");
+                            had_error = true;
                         }
                     }
                 }
@@ -316,6 +318,7 @@ impl Scanner {
 
                 _ => {
                     report::error(self.line, "Unexpected character.");
+                    had_error = true;
                 }
             }
         }
@@ -325,7 +328,7 @@ impl Scanner {
             Object::NULL,
             self.line,
         ));
-        tokens
+        if had_error { Err(()) } else { Ok(tokens) }
     }
 
     fn is_alpha(c: char) -> bool {

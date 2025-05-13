@@ -2,14 +2,13 @@ use std::{env, fs};
 
 use parser::Parser;
 use scanner::Scanner;
-use token::Object;
 mod expr;
+mod interpreter;
 mod parser;
 mod report;
 mod scanner;
 mod token;
 mod token_type;
-mod interpreter;
 fn main() {
     let args: Vec<String> = env::args().collect();
     // let args: Vec<&'static str> = vec!["name", r"./test.lox"]; //这行是测试代码
@@ -29,29 +28,25 @@ fn run_file(path: String) {
 fn run(source: String) {
     let mut scanner = Scanner::new();
     let tokens = scanner.scan_tokens(source);
-    let mut parser = Parser::new(tokens);
-    match parser.parse() {
-        Ok(expr) => {
-            match interpreter::interpret(expr) {
-                Ok(obj) => println!("{}", stringify(&obj)),
-                Err(e) => {
-                    eprintln!( "Runtime error: {} at line {}", e.message, e.line)
+    match tokens {
+        Ok(tokens) => {
+            let mut parser = Parser::new(tokens);
+            match parser.parse() {
+                Ok(expr) => match interpreter::interpret(expr) {
+                    Ok(_obj) => {}
+                    Err(e) => {
+                        eprintln!("Runtime error: {} at line {}", e.message, e.line)
+                    }
                 },
+                Err(_e) => {
+                    //语法分析出现错误，简单退出进程
+                    std::process::exit(65);
+                }
             }
-        },
-        Err(_e) =>   {
-            //解析出现错误，简单退出进程
+        }
+        Err(_e) => {
+            //词法分析出现错误，简单退出进程
             std::process::exit(65);
-        },
-    }
-
-}
-
-fn stringify(obj: &Object) -> String {
-    match obj {
-        Object::Number(value) => value.to_string(),
-        Object::String(value) => value.clone(),
-        Object::Boolean(value) => value.to_string(),
-        Object::NULL => "null".to_string(),
+        }
     }
 }

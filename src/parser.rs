@@ -1,5 +1,5 @@
 use crate::{
-    expr::Expr,
+    expr::{Expr, Stmt},
     report,
     token::{Object, Token},
     token_type::TokenType,
@@ -7,7 +7,7 @@ use crate::{
 #[derive(Debug)]
 pub struct ParseError {
     pub message: String,
-    pub line: usize,
+    pub token: Token,
 }
 
 pub struct Parser {
@@ -21,15 +21,45 @@ impl Parser {
             tokens: t,
         }
     }
-    //
-    pub fn parse(&mut self) -> Result<Expr, bool> {
-        self.expression().map_err(|err| {
-            report::error(err.line, &err.message);
-            self.synchronize();
-            false  
-        })
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, ()> {
+        // 用 `()` 表示"有错误"，无额外信息
+        let mut statements = Vec::new();
+        let mut had_error = false; // 只需记录是否出错
+
+        while !self.is_at_end() {
+            match self.statement() {
+                Ok(stmt) => statements.push(stmt),
+                Err(err) => {
+                    report::report(err.token.line, &err.token.lexeme, &err.message); // 报告错误
+                    self.synchronize(); // 同步恢复
+                    had_error = true; // 标记出错
+                }
+            }
+        }
+
+        if had_error {
+            Err(()) // 返回简单错误标志
+        } else {
+            Ok(statements) // 全部成功
+        }
     }
-   //遇到解析错误（ParseError）后，让解析器“对齐”到下一个合理的语句起点，从而继续解析剩余代码，而不是整个程序直接中断。
+    fn statement(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(&[TokenType::Print]) {
+            return self.print_statement();
+        }
+        self.expression_statement()
+    }
+    fn print_statement(&mut self) -> Result<Stmt, ParseError> {
+        let value = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
+        Ok(Stmt::Print(value))
+    }
+    fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
+        Ok(Stmt::Expression(expr))
+    }
+    //遇到解析错误（ParseError）后，让解析器“对齐”到下一个合理的语句起点，从而继续解析剩余代码，而不是整个程序直接中断。
     fn synchronize(&mut self) {
         self.advance();
         while !self.is_at_end() {
@@ -37,7 +67,14 @@ impl Parser {
                 return;
             }
             match self.peek().token_type {
-                TokenType::Class | TokenType::Fun | TokenType::Var | TokenType::For | TokenType::If | TokenType::While | TokenType::Print | TokenType::Return => {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => {
                     return;
                 }
                 _ => {
@@ -45,9 +82,9 @@ impl Parser {
                 }
             }
         }
-    }   
+    }
     fn expression(&mut self) -> Result<Expr, ParseError> {
-       self.equality()
+        self.equality()
     }
 
     fn match_token(&mut self, types: &[TokenType]) -> bool {
@@ -174,7 +211,10 @@ impl Parser {
                 Object::String(s) => Ok(Expr::Literal(Object::String(s.clone()))),
                 _ => {
                     report::error(prev.line, "Expected number or string literal at line ");
-                    Err(ParseError { message: "Expected number or string literal at line".to_string(), line: prev.line })
+                    Err(ParseError {
+                        message: "Expected number or string literal at line".to_string(),
+                        token: prev.clone(),
+                    })
                 }
             };
         }
@@ -187,7 +227,10 @@ impl Parser {
         // 如果没有匹配到任何情况，返回错误
         let token = self.peek();
         report::error(token.line, "Expected expression at line");
-        Err(ParseError { message: "Expected expression at line".to_string(), line: token.line })
+        Err(ParseError {
+            message: "Expected expression at line".to_string(),
+            token: token.clone(),
+        })
     }
 
     // 需要添加的 consume 方法
@@ -195,7 +238,10 @@ impl Parser {
         if self.check(t) {
             Ok(self.advance())
         } else {
-            Err(ParseError { message: message.to_string(), line: self.peek().line })
+            Err(ParseError {
+                message: message.to_string(),
+                token: self.peek().clone(),
+            })
         }
     }
 }
