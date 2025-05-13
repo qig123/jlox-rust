@@ -1,4 +1,5 @@
 use crate::{
+    environment::Environment,
     expr::{Expr, Stmt},
     token::Object,
     token_type::TokenType,
@@ -8,173 +9,192 @@ pub struct RuntimeError {
     pub message: String,
     pub line: usize,
 }
-pub fn interpret(statements: Vec<Stmt>) -> Result<Object, RuntimeError> {
-    for stmt in statements {
-        interpret_stmt(stmt)?;
-    }
-    Ok(Object::NULL)
+pub struct Interpreter {
+    environment: Environment,
 }
-
-pub fn interpret_expr(expr: Expr) -> Result<Object, RuntimeError> {
-    match expr {
-        Expr::Literal(value) => Ok(value),
-        Expr::Grouping(expr) => interpret_expr(*expr),
-        Expr::Unary { operator, right } => {
-            let right = interpret_expr(*right)?;
-            match operator.token_type {
-                TokenType::Minus => {
-                    if let Object::Number(value) = right {
-                        Ok(Object::Number(-value))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be a number".to_string(),
-                            line: operator.line,
-                        })
-                    }
-                }
-                TokenType::Bang => Ok(Object::Boolean(!is_truthy(&right))),
-                _ => Err(RuntimeError {
-                    message: "Operands must be a number".to_string(),
-                    line: operator.line,
-                }),
-            }
+impl Interpreter {
+    pub fn new() -> Self {
+        Interpreter {
+            environment: Environment::new(),
         }
-        Expr::Binary {
-            left,
-            operator,
-            right,
-        } => {
-            let left = interpret_expr(*left)?;
-            let right = interpret_expr(*right)?;
-            match operator.token_type {
-                TokenType::Plus => {
-                    // 处理数字相加或字符串连接
-                    if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
-                        Ok(Object::Number(a + b))
-                    } else if let (Object::String(a), Object::String(b)) = (&left, &right) {
-                        Ok(Object::String(format!("{}{}", a, b)))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be two numbers or two strings".to_string(),
-                            line: operator.line,
-                        }) //"Operands must be two numbers or two strings"
+    }
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<Object, RuntimeError> {
+        for stmt in statements {
+            self.interpret_stmt(stmt)?;
+        }
+        Ok(Object::NULL)
+    }
+
+    pub fn interpret_expr(&mut self, expr: Expr) -> Result<Object, RuntimeError> {
+        match expr {
+            Expr::Literal(value) => Ok(value),
+            Expr::Grouping(expr) => self.interpret_expr(*expr),
+            Expr::Unary { operator, right } => {
+                let right = self.interpret_expr(*right)?;
+                match operator.token_type {
+                    TokenType::Minus => {
+                        if let Object::Number(value) = right {
+                            Ok(Object::Number(-value))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be a number".to_string(),
+                                line: operator.line,
+                            })
+                        }
                     }
-                }
-                TokenType::Minus => {
-                    if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
-                        Ok(Object::Number(a - b))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be two numbers".to_string(),
-                            line: operator.line,
-                        }) //"Operands must be two numbers"
-                    }
-                }
-                TokenType::Star => {
-                    if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
-                        Ok(Object::Number(a * b))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be two numbers".to_string(),
-                            line: operator.line,
-                        }) //"Operands must be two numbers"
-                    }
-                }
-                TokenType::Slash => {
-                    if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
-                        Ok(Object::Number(a / b))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be two numbers".to_string(),
-                            line: operator.line,
-                        }) //"Operands must be two numbers"
-                    }
-                }
-                TokenType::Greater => {
-                    if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
-                        Ok(Object::Boolean(a > b))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be two numbers".to_string(),
-                            line: operator.line,
-                        }) //"Operands must be two numbers"
-                    }
-                }
-                TokenType::GreaterEqual => {
-                    if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
-                        Ok(Object::Boolean(a >= b))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be two numbers".to_string(),
-                            line: 0,
-                        }) //"Operands must be two numbers"
-                    }
-                }
-                TokenType::Less => {
-                    if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
-                        Ok(Object::Boolean(a < b))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be two numbers".to_string(),
-                            line: operator.line,
-                        }) //"Operands must be two numbers"
-                    }
-                }
-                TokenType::LessEqual => {
-                    if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
-                        Ok(Object::Boolean(a <= b))
-                    } else {
-                        Err(RuntimeError {
-                            message: "Operands must be two numbers".to_string(),
-                            line: operator.line,
-                        }) //"Operands must be two numbers"
-                    }
-                }
-                TokenType::EqualEqual => Ok(Object::Boolean(is_equal(&left, &right))),
-                TokenType::BangEqual => Ok(Object::Boolean(!is_equal(&left, &right))),
-                _ => {
-                    Err(RuntimeError {
-                        message: "Operands must be two numbers".to_string(),
+                    TokenType::Bang => Ok(Object::Boolean(!Self::is_truthy(&right))),
+                    _ => Err(RuntimeError {
+                        message: "Operands must be a number".to_string(),
                         line: operator.line,
-                    }) //"Operands must be two numbers"
+                    }),
                 }
+            }
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.interpret_expr(*left)?;
+                let right = self.interpret_expr(*right)?;
+                match operator.token_type {
+                    TokenType::Plus => {
+                        // 处理数字相加或字符串连接
+                        if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
+                            Ok(Object::Number(a + b))
+                        } else if let (Object::String(a), Object::String(b)) = (&left, &right) {
+                            Ok(Object::String(format!("{}{}", a, b)))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be two numbers or two strings".to_string(),
+                                line: operator.line,
+                            }) //"Operands must be two numbers or two strings"
+                        }
+                    }
+                    TokenType::Minus => {
+                        if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
+                            Ok(Object::Number(a - b))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be two numbers".to_string(),
+                                line: operator.line,
+                            }) //"Operands must be two numbers"
+                        }
+                    }
+                    TokenType::Star => {
+                        if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
+                            Ok(Object::Number(a * b))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be two numbers".to_string(),
+                                line: operator.line,
+                            }) //"Operands must be two numbers"
+                        }
+                    }
+                    TokenType::Slash => {
+                        if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
+                            Ok(Object::Number(a / b))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be two numbers".to_string(),
+                                line: operator.line,
+                            }) //"Operands must be two numbers"
+                        }
+                    }
+                    TokenType::Greater => {
+                        if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
+                            Ok(Object::Boolean(a > b))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be two numbers".to_string(),
+                                line: operator.line,
+                            }) //"Operands must be two numbers"
+                        }
+                    }
+                    TokenType::GreaterEqual => {
+                        if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
+                            Ok(Object::Boolean(a >= b))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be two numbers".to_string(),
+                                line: 0,
+                            }) //"Operands must be two numbers"
+                        }
+                    }
+                    TokenType::Less => {
+                        if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
+                            Ok(Object::Boolean(a < b))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be two numbers".to_string(),
+                                line: operator.line,
+                            }) //"Operands must be two numbers"
+                        }
+                    }
+                    TokenType::LessEqual => {
+                        if let (Object::Number(a), Object::Number(b)) = (&left, &right) {
+                            Ok(Object::Boolean(a <= b))
+                        } else {
+                            Err(RuntimeError {
+                                message: "Operands must be two numbers".to_string(),
+                                line: operator.line,
+                            }) //"Operands must be two numbers"
+                        }
+                    }
+                    TokenType::EqualEqual => Ok(Object::Boolean(Self::is_equal(&left, &right))),
+                    TokenType::BangEqual => Ok(Object::Boolean(!Self::is_equal(&left, &right))),
+                    _ => {
+                        Err(RuntimeError {
+                            message: "Operands must be two numbers".to_string(),
+                            line: operator.line,
+                        }) //"Operands must be two numbers"
+                    }
+                }
+            }
+            Expr::Variable(name) => self.environment.get(name),
+        }
+    }
+    pub fn interpret_stmt(&mut self, stmt: Stmt) -> Result<Object, RuntimeError> {
+        match stmt {
+            Stmt::Expression(expr) => self.interpret_expr(expr),
+            Stmt::Print(expr) => {
+                let e = self.interpret_expr(expr)?;
+                println!("{}", Self::stringify(&e));
+                Ok(Object::NULL)
+            }
+            Stmt::Var { name, initializer } => {
+                let value = match initializer {
+                    Some(expr) => self.interpret_expr(expr)?,
+                    None => Object::NULL,
+                };
+                self.environment.define(name.lexeme, value);
+                Ok(Object::NULL)
             }
         }
     }
-}
-pub fn interpret_stmt(stmt: Stmt) -> Result<Object, RuntimeError> {
-    match stmt {
-        Stmt::Expression(expr) => interpret_expr(expr),
-        Stmt::Print(expr) => {
-            let e = interpret_expr(expr)?;
-            println!("{}", stringify(&e));
-            Ok(Object::NULL)
+    // 辅助函数：判断一个值是否为真
+    fn is_truthy(obj: &Object) -> bool {
+        match obj {
+            Object::NULL => false,
+            Object::Boolean(b) => *b,
+            _ => true,
         }
     }
-}
-// 辅助函数：判断一个值是否为真
-fn is_truthy(obj: &Object) -> bool {
-    match obj {
-        Object::NULL => false,
-        Object::Boolean(b) => *b,
-        _ => true,
+    fn is_equal(a: &Object, b: &Object) -> bool {
+        match (a, b) {
+            (Object::Number(a), Object::Number(b)) => a == b,
+            (Object::String(a), Object::String(b)) => a == b,
+            (Object::Boolean(a), Object::Boolean(b)) => a == b,
+            (Object::NULL, Object::NULL) => true,
+            _ => false,
+        }
     }
-}
-fn is_equal(a: &Object, b: &Object) -> bool {
-    match (a, b) {
-        (Object::Number(a), Object::Number(b)) => a == b,
-        (Object::String(a), Object::String(b)) => a == b,
-        (Object::Boolean(a), Object::Boolean(b)) => a == b,
-        (Object::NULL, Object::NULL) => true,
-        _ => false,
-    }
-}
 
-fn stringify(obj: &Object) -> String {
-    match obj {
-        Object::Number(value) => value.to_string(),
-        Object::String(value) => value.clone(),
-        Object::Boolean(value) => value.to_string(),
-        Object::NULL => "null".to_string(),
+    fn stringify(obj: &Object) -> String {
+        match obj {
+            Object::Number(value) => value.to_string(),
+            Object::String(value) => value.clone(),
+            Object::Boolean(value) => value.to_string(),
+            Object::NULL => "null".to_string(),
+        }
     }
 }

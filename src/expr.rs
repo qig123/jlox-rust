@@ -13,9 +13,14 @@ pub enum Expr {
     },
     Grouping(Box<Expr>),
     Literal(Object),
+    Variable(Token),
 }
 #[derive(Debug)]
 pub enum Stmt {
     Expression(Expr),
     Print(Expr),
+    Var {
+        name: Token,
+        initializer: Option<Expr>,
+    },
 }

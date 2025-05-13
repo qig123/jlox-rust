@@ -1,3 +1,4 @@
-print 5;
-print 6
-print 7;
+var a = 1;
+var b = 2;
+var a =5;
+print a + b;

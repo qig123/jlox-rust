@@ -30,7 +30,7 @@ impl Parser {
         let mut had_error = false; // 只需记录是否出错
 
         while !self.is_at_end() {
-            match self.statement() {
+            match self.declaration() {
                 Ok(stmt) => statements.push(stmt),
                 Err(err) => {
                     report::report_error(err.line, &self.source_lines, err.column, &err.message);
@@ -45,6 +45,27 @@ impl Parser {
         } else {
             Ok(statements) // 全部成功
         }
+    }
+    fn declaration(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(&[TokenType::Var]) {
+            return self.var_declaration();
+        }
+        self.statement()
+    }
+    fn var_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let name = self
+            .consume(TokenType::Identifier, "Expect variable name.")?
+            .clone();
+        let initializer = if self.match_token(&[TokenType::Equal]) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+        )?;
+        Ok(Stmt::Var { name, initializer })
     }
     fn statement(&mut self) -> Result<Stmt, ParseError> {
         if self.match_token(&[TokenType::Print]) {
@@ -218,6 +239,10 @@ impl Parser {
                     column: prev.column,
                 }),
             };
+        }
+        if self.match_token(&[TokenType::Identifier]) {
+            let name = self.previous().clone();
+            return Ok(Expr::Variable(name));
         }
         // 处理分组表达式
         if self.match_token(&[TokenType::LeftParen]) {

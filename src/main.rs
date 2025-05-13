@@ -1,7 +1,9 @@
 use std::{env, fs};
 
+use interpreter::Interpreter;
 use parser::Parser;
 use scanner::Scanner;
+mod environment;
 mod expr;
 mod interpreter;
 mod parser;
@@ -32,7 +34,7 @@ fn run(source: String) {
         Ok(tokens) => {
             let mut parser = Parser::new(tokens, source); // Pass source to parser
             match parser.parse() {
-                Ok(expr) => match interpreter::interpret(expr) {
+                Ok(expr) => match Interpreter::new().interpret(expr) {
                     Ok(_obj) => {}
                     Err(e) => {
                         eprintln!("Runtime error: {} at line {}", e.message, e.line)
