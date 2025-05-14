@@ -81,7 +81,63 @@ impl Parser {
         if self.match_token(&[TokenType::While]) {
             return self.while_statement();
         }
+        if self.match_token(&[TokenType::For]) {
+            return self.for_statement();
+        }
         self.expression_statement()
+    }
+    fn for_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+
+        // 1. 解析初始化部分
+        let init = if self.match_token(&[TokenType::Semicolon]) {
+            None
+        } else if self.match_token(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        // 2. 解析条件部分
+        let condition = if !self.check(TokenType::Semicolon) {
+            self.expression()?
+        } else {
+            // 如果没有条件，默认为 true
+            Expr::Literal(Object::Boolean(true))
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+        // 3. 解析增量部分
+        let increment = if !self.check(TokenType::RightParen) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+
+        // 4. 解析循环体
+        let mut body = self.statement()?;
+
+        // 5. 将 for 循环转换为 while 循环的结构
+        if let Some(increment) = increment {
+            body = Stmt::Block {
+                statements: vec![body, Stmt::Expression(increment)],
+            };
+        }
+
+        let while_loop = Stmt::While {
+            condition,
+            body: Box::new(body),
+        };
+
+        // 6. 如果有初始化部分，包装在块语句中
+        Ok(if let Some(init) = init {
+            Stmt::Block {
+                statements: vec![init, while_loop],
+            }
+        } else {
+            while_loop
+        })
     }
     fn while_statement(&mut self) -> Result<Stmt, ParseError> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
