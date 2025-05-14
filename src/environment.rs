@@ -4,10 +4,10 @@ use crate::{
     interpreter::RuntimeError,
     token::{Object, Token},
 };
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Environment {
-    values: HashMap<String, Object>,
-    enclosing: Option<Rc<RefCell<Environment>>>, //
+    pub values: HashMap<String, Object>,
+    pub enclosing: Option<Rc<RefCell<Environment>>>, //
 }
 impl Environment {
     pub fn new() -> Self {
@@ -44,10 +44,14 @@ impl Environment {
         }
     }
     pub fn assign(&mut self, name: Token, value: Object) -> Result<Object, RuntimeError> {
+        println!("Debug - Trying to assign: {} = {:?}", name.lexeme, value);
         if self.values.contains_key(&name.lexeme) {
-            self.values.insert(name.lexeme, value.clone());
-            Ok(value.clone())
+            println!("Debug - Found variable in current environment");
+            self.values.insert(name.lexeme.clone(), value.clone());
+            println!("Debug - After insert: {:?}", self.values);
+            Ok(value)
         } else if let Some(enclosing) = &self.enclosing {
+            println!("Debug - Looking in enclosing environment");
             enclosing.borrow_mut().assign(name, value)
         } else {
             Err(RuntimeError {

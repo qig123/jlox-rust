@@ -21,6 +21,8 @@ impl Interpreter {
         }
     }
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<Object, RuntimeError> {
+        //怎样打印statements
+        println!("statements: {:?}", statements);
         for stmt in statements {
             self.interpret_stmt(stmt)?;
         }
@@ -155,6 +157,7 @@ impl Interpreter {
             Expr::Variable(name) => self.environment.get(name),
             Expr::Assign { name, value } => {
                 let value = self.interpret_expr(*value)?;
+                println!("Debug - Assignment: {} = {:?}", name.lexeme, value);
                 self.environment.assign(name, value)
             }
             Expr::Logical {
@@ -195,7 +198,7 @@ impl Interpreter {
             }
             Stmt::Block { statements } => self.execute_block(
                 statements,
-                Environment::new_with_enclosing(Rc::new(RefCell::new(self.environment.clone()))), //这里应该怎样写
+                Environment::new_with_enclosing(Rc::new(RefCell::new(self.environment.clone()))),
             ),
             Stmt::If {
                 condition,
@@ -207,6 +210,23 @@ impl Interpreter {
                     self.interpret_stmt(*then_branch)?;
                 } else if let Some(else_branch) = else_branch {
                     self.interpret_stmt(*else_branch)?;
+                }
+                Ok(Object::NULL)
+            }
+            Stmt::While { condition, body } => {
+                while Self::is_truthy(&self.interpret_expr(condition.clone())?) {
+                    println!("Debug - Before body execution: {:?}", self.environment);
+                    let result = match *body.clone() {
+                        Stmt::Block { statements } => {
+                            let mut last_result = Object::NULL;
+                            for stmt in statements {
+                                last_result = self.interpret_stmt(stmt)?;
+                            }
+                            Ok(last_result)
+                        }
+                        _ => self.interpret_stmt(*body.clone()),
+                    }?;
+                    println!("Debug - After body execution: {:?}", self.environment);
                 }
                 Ok(Object::NULL)
             }

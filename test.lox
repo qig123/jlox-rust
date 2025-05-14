@@ -1,9 +1,6 @@
-var x = 1;
+var i = 0;
 
-if (x > 5) {
-  print "x is greater than 5";
-} else {
-  print "x is less than or equal to 5";
+while (i < 2) {
+  print i;
+  i = i + 1;
 }
-print "hi" or 2; // "hi".
-print nil or "yes"; // "yes".
