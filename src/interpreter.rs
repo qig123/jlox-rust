@@ -22,19 +22,19 @@ impl Interpreter {
     }
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<Object, RuntimeError> {
         //怎样打印statements
-        println!("statements: {:?}", statements);
+        // println!("statements: {:?}", statements);
         for stmt in statements {
-            self.interpret_stmt(stmt)?;
+            self.interpret_stmt(&stmt)?;
         }
         Ok(Object::NULL)
     }
 
-    pub fn interpret_expr(&mut self, expr: Expr) -> Result<Object, RuntimeError> {
+    pub fn interpret_expr(&mut self, expr: &Expr) -> Result<Object, RuntimeError> {
         match expr {
-            Expr::Literal(value) => Ok(value),
-            Expr::Grouping(expr) => self.interpret_expr(*expr),
+            Expr::Literal(value) => Ok(value.clone()),
+            Expr::Grouping(expr) => self.interpret_expr(&*expr),
             Expr::Unary { operator, right } => {
-                let right = self.interpret_expr(*right)?;
+                let right = self.interpret_expr(&*right)?;
                 match operator.token_type {
                     TokenType::Minus => {
                         if let Object::Number(value) = right {
@@ -58,8 +58,8 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.interpret_expr(*left)?;
-                let right = self.interpret_expr(*right)?;
+                let left = self.interpret_expr(&*left)?;
+                let right = self.interpret_expr(&*right)?;
                 match operator.token_type {
                     TokenType::Plus => {
                         // 处理数字相加或字符串连接
@@ -154,18 +154,18 @@ impl Interpreter {
                     }
                 }
             }
-            Expr::Variable(name) => self.environment.get(name),
+            Expr::Variable(name) => self.environment.get(name.clone()),
             Expr::Assign { name, value } => {
-                let value = self.interpret_expr(*value)?;
-                println!("Debug - Assignment: {} = {:?}", name.lexeme, value);
-                self.environment.assign(name, value)
+                let value = self.interpret_expr(&*value)?;
+                // println!("Debug - Assignment: {} = {:?}", name.lexeme, value);
+                self.environment.assign(name.clone(), value)
             }
             Expr::Logical {
                 left,
                 operator,
                 right,
             } => {
-                let left = self.interpret_expr(*left)?;
+                let left = self.interpret_expr(&*left)?;
                 if operator.token_type == TokenType::Or {
                     if Self::is_truthy(&left) {
                         return Ok(left);
@@ -175,25 +175,25 @@ impl Interpreter {
                         return Ok(left);
                     }
                 }
-                let right = self.interpret_expr(*right)?;
+                let right = self.interpret_expr(&*right)?;
                 Ok(right)
             }
         }
     }
-    pub fn interpret_stmt(&mut self, stmt: Stmt) -> Result<Object, RuntimeError> {
+    pub fn interpret_stmt(&mut self, stmt: &Stmt) -> Result<Object, RuntimeError> {
         match stmt {
-            Stmt::Expression(expr) => self.interpret_expr(expr),
+            Stmt::Expression(expr) => self.interpret_expr(&expr),
             Stmt::Print(expr) => {
-                let e = self.interpret_expr(expr)?;
+                let e = self.interpret_expr(&expr)?;
                 println!("{}", Self::stringify(&e));
                 Ok(Object::NULL)
             }
             Stmt::Var { name, initializer } => {
                 let value = match initializer {
-                    Some(expr) => self.interpret_expr(expr)?,
+                    Some(expr) => self.interpret_expr(&expr)?,
                     None => Object::Uninitialized,
                 };
-                self.environment.define(name.lexeme, value);
+                self.environment.define(name.lexeme.clone(), value);
                 Ok(Object::NULL)
             }
             Stmt::Block { statements } => self.execute_block(
@@ -205,18 +205,18 @@ impl Interpreter {
                 then_branch,
                 else_branch,
             } => {
-                let condition = self.interpret_expr(condition)?;
+                let condition = self.interpret_expr(&condition)?;
                 if Self::is_truthy(&condition) {
-                    self.interpret_stmt(*then_branch)?;
+                    self.interpret_stmt(&*then_branch)?;
                 } else if let Some(else_branch) = else_branch {
-                    self.interpret_stmt(*else_branch)?;
+                    self.interpret_stmt(&*else_branch)?;
                 }
                 Ok(Object::NULL)
             }
             Stmt::While { condition, body } => {
-                while Self::is_truthy(&self.interpret_expr(condition.clone())?) {
-                    println!("Debug - Before body execution: {:?}", self.environment);
-                    let result = match *body.clone() {
+                while Self::is_truthy(&self.interpret_expr(&condition)?) {
+                    // println!("Debug - Before body execution: {:?}", self.environment);
+                    let _result = match &**body {
                         Stmt::Block { statements } => {
                             let mut last_result = Object::NULL;
                             for stmt in statements {
@@ -224,9 +224,9 @@ impl Interpreter {
                             }
                             Ok(last_result)
                         }
-                        _ => self.interpret_stmt(*body.clone()),
+                        _ => self.interpret_stmt(&*body),
                     }?;
-                    println!("Debug - After body execution: {:?}", self.environment);
+                    // println!("Debug - After body execution: {:?}", self.environment);
                 }
                 Ok(Object::NULL)
             }
@@ -234,13 +234,13 @@ impl Interpreter {
     }
     fn execute_block(
         &mut self,
-        statements: Vec<Stmt>,
+        statements: &[Stmt], // 改为切片引用
         environment: Environment,
     ) -> Result<Object, RuntimeError> {
         let previous = std::mem::replace(&mut self.environment, environment);
         let result = (|| {
             for stmt in statements {
-                self.interpret_stmt(stmt)?;
+                self.interpret_stmt(&stmt)?;
             }
             Ok(Object::NULL)
         })(); // 立即执行闭包

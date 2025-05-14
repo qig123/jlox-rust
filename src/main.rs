@@ -12,8 +12,8 @@ mod scanner;
 mod token;
 mod token_type;
 fn main() {
-    // let args: Vec<String> = env::args().collect();
-    let args: Vec<&'static str> = vec!["name", r"./test.lox"]; //这行是测试代码
+    let args: Vec<String> = env::args().collect();
+    // let args: Vec<&'static str> = vec!["name", r"./test.lox"]; //这行是测试代码
     match args.len() {
         2 => {
             run_file(args[1].to_string());

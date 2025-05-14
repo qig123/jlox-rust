@@ -44,14 +44,14 @@ impl Environment {
         }
     }
     pub fn assign(&mut self, name: Token, value: Object) -> Result<Object, RuntimeError> {
-        println!("Debug - Trying to assign: {} = {:?}", name.lexeme, value);
+        // println!("Debug - Trying to assign: {} = {:?}", name.lexeme, value);
         if self.values.contains_key(&name.lexeme) {
-            println!("Debug - Found variable in current environment");
+            // println!("Debug - Found variable in current environment");
             self.values.insert(name.lexeme.clone(), value.clone());
-            println!("Debug - After insert: {:?}", self.values);
+            // println!("Debug - After insert: {:?}", self.values);
             Ok(value)
         } else if let Some(enclosing) = &self.enclosing {
-            println!("Debug - Looking in enclosing environment");
+            // println!("Debug - Looking in enclosing environment");
             enclosing.borrow_mut().assign(name, value)
         } else {
             Err(RuntimeError {
