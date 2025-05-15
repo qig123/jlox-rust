@@ -14,6 +14,10 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Literal(Object),
     Variable(Token),
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 #[derive(Debug)]
 pub enum Stmt {

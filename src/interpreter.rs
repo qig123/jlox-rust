@@ -151,6 +151,11 @@ impl Interpreter {
                 }
             }
             Expr::Variable(name) => self.environment.get(name),
+            Expr::Assign { name, value } => {
+                let value = self.interpret_expr(*value)?;
+                self.environment.assign(name, &value)?;
+                Ok(value) // 返回值无意义
+            }
         }
     }
     pub fn interpret_stmt(&mut self, stmt: Stmt) -> Result<Object, RuntimeError> {

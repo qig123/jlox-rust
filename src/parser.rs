@@ -108,7 +108,30 @@ impl Parser {
         }
     }
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.equality()
+        self.assignment()
+    }
+    fn assignment(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.equality()?;
+        if self.match_token(&vec![TokenType::Equal]) {
+            let equals = self.previous().clone();
+            let value = self.assignment()?;
+            match expr {
+                Expr::Variable(name) => {
+                    return Ok(Expr::Assign {
+                        name,
+                        value: Box::new(value),
+                    });
+                }
+                _ => {
+                    return Err(ParseError {
+                        message: "Invalid assignment target.".to_string(),
+                        line: equals.line,
+                        column: equals.column,
+                    });
+                }
+            }
+        }
+        Ok(expr)
     }
 
     fn match_token(&mut self, types: &[TokenType]) -> bool {
