@@ -1,7 +1,5 @@
-var a = 1;
-var b = 2;
-var a =5;
-print a + b;
-var a = 1;
-a=300;
-print a; // "2"
+var temperature = 25;
+
+if (temperature > 30) {
+  print("It's hot outside!");
+} 
