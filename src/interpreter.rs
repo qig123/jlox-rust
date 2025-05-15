@@ -1,5 +1,5 @@
 use crate::{
-    environment::Environment,
+    environment::{Environment, EnvironmentTree},
     expr::{Expr, Stmt},
     token::Object,
     token_type::TokenType,
@@ -10,12 +10,12 @@ pub struct RuntimeError {
     pub line: usize,
 }
 pub struct Interpreter {
-    environment: Environment,
+    environment: EnvironmentTree,
 }
 impl Interpreter {
     pub fn new() -> Self {
         Interpreter {
-            environment: Environment::new(),
+            environment: EnvironmentTree::new(),
         }
     }
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<Object, RuntimeError> {
