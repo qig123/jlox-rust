@@ -1,6 +1,7 @@
 use crate::{
     environment::EnvironmentTree,
     expr::{Expr, Stmt},
+    lox_callable::{LoxCallable, LoxFunction},
     token::Object,
     token_type::TokenType,
 };
@@ -10,7 +11,7 @@ pub struct RuntimeError {
     pub line: usize,
 }
 pub struct Interpreter {
-    environment: EnvironmentTree,
+    pub environment: EnvironmentTree,
 }
 impl Interpreter {
     pub fn new() -> Self {
@@ -29,9 +30,9 @@ impl Interpreter {
     pub fn interpret_expr(&mut self, expr: &Expr) -> Result<Object, RuntimeError> {
         match expr {
             Expr::Literal(value) => Ok(value.clone()),
-            Expr::Grouping(expr) => self.interpret_expr(expr),
+            Expr::Grouping(expr) => self.interpret_expr(&*expr),
             Expr::Unary { operator, right } => {
-                let right = self.interpret_expr(right)?;
+                let right = self.interpret_expr(&*right)?;
                 match operator.token_type {
                     TokenType::Minus => {
                         if let Object::Number(value) = right {
@@ -55,8 +56,8 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.interpret_expr(left)?;
-                let right = self.interpret_expr(right)?;
+                let left = self.interpret_expr(&*left)?;
+                let right = self.interpret_expr(&*right)?;
                 match operator.token_type {
                     TokenType::Plus => {
                         // 处理数字相加或字符串连接
@@ -153,7 +154,7 @@ impl Interpreter {
             }
             Expr::Variable(name) => self.environment.get(name.clone()),
             Expr::Assign { name, value } => {
-                let value = self.interpret_expr(value)?;
+                let value = self.interpret_expr(&*value)?;
                 self.environment.assign(name.clone(), &value)?;
                 Ok(value) // 返回值无意义
             }
@@ -162,7 +163,7 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.interpret_expr(left)?;
+                let left = self.interpret_expr(&*left)?;
                 // println!("左边:{:?}", left);
                 match operator.token_type {
                     TokenType::Or => {
@@ -177,21 +178,57 @@ impl Interpreter {
                     }
                 }
                 // println!("右边:{:?}", *right);
-                self.interpret_expr(right)
+                self.interpret_expr(&*right)
+            }
+            Expr::Call {
+                callee,
+                paren,
+                arguments,
+            } => {
+                // 1. 解析被调用对象（函数）
+                let callee_obj = self.interpret_expr(&*callee)?;
+
+                // 2. 解析所有参数表达式
+                let mut args = Vec::with_capacity(arguments.len());
+                for arg in arguments {
+                    args.push(self.interpret_expr(arg)?);
+                }
+
+                // 3. 检查是否为可调用对象
+                match callee_obj {
+                    Object::LoxFunction(func) => {
+                        let mut f = func; // 获取可变引用
+                        if args.len() != f.arity() {
+                            return Err(RuntimeError {
+                                message: format!(
+                                    "Exprect {} arguments but got {}.",
+                                    f.arity(),
+                                    args.len()
+                                ),
+                                line: paren.line,
+                            });
+                        }
+                        f.call(self, args)
+                    }
+                    _ => Err(RuntimeError {
+                        message: "Can only call functions and classes.".to_string(),
+                        line: paren.line,
+                    }),
+                }
             }
         }
     }
     pub fn interpret_stmt(&mut self, stmt: &Stmt) -> Result<Object, RuntimeError> {
         match stmt {
-            Stmt::Expression(expr) => self.interpret_expr(expr),
+            Stmt::Expression(expr) => self.interpret_expr(&expr),
             Stmt::Print(expr) => {
-                let e = self.interpret_expr(expr)?;
+                let e = self.interpret_expr(&expr)?;
                 println!("{}", Self::stringify(&e));
                 Ok(Object::NULL)
             }
             Stmt::Var { name, initializer } => {
                 let value = match initializer {
-                    Some(expr) => self.interpret_expr(expr)?,
+                    Some(expr) => self.interpret_expr(&expr)?,
                     None => Object::NULL,
                 };
                 self.environment.define(name.lexeme.clone(), value);
@@ -206,7 +243,7 @@ impl Interpreter {
                 then_branch,
                 else_branch,
             } => {
-                let c = self.interpret_expr(condition)?;
+                let c = self.interpret_expr(&condition)?;
                 if Self::is_truthy(&c) {
                     self.interpret_stmt(&*then_branch)?;
                 } else {
@@ -223,17 +260,25 @@ impl Interpreter {
                 // 只在循环开始前创建一个新的作用域
                 self.environment.enter_child_scope();
                 // 循环条件检查
-                while Self::is_truthy(&self.interpret_expr(condition)?) {
+                while Self::is_truthy(&self.interpret_expr(&condition)?) {
                     // 执行循环体
-                    self.interpret_stmt(body)?;
+                    self.interpret_stmt(&*body)?;
                 }
                 // 循环结束后退出作用域
                 self.environment.exit_scope();
                 Ok(Object::NULL)
             }
+            Stmt::Function { name, params, body } => {
+                // 解析时创建FunctionDecl
+                let f = LoxFunction::new(params.clone(), body.clone());
+
+                self.environment
+                    .define(name.lexeme.clone(), Object::LoxFunction(Box::new(f)));
+                Ok(Object::NULL)
+            }
         }
     }
-    fn execute_block(&mut self, stmts: &Vec<Stmt>) {
+    pub fn execute_block(&mut self, stmts: &Vec<Stmt>) {
         self.environment.enter_child_scope();
         for s in stmts {
             let _ = self.interpret_stmt(s);
@@ -264,6 +309,7 @@ impl Interpreter {
             Object::String(value) => value.clone(),
             Object::Boolean(value) => value.to_string(),
             Object::NULL => "null".to_string(),
+            Object::LoxFunction(_f) => format!("<fn >"),
         }
     }
 }

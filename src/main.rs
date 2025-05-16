@@ -6,6 +6,7 @@ use scanner::Scanner;
 mod environment;
 mod expr;
 mod interpreter;
+mod lox_callable;
 mod parser;
 mod report;
 mod scanner;

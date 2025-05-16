@@ -1,10 +1,11 @@
-use crate::token_type::TokenType;
+use crate::{lox_callable::LoxFunction, token_type::TokenType};
 #[derive(Debug, Clone)]
 pub enum Object {
     String(String),
     NULL,
     Number(f64),
     Boolean(bool),
+    LoxFunction(Box<LoxFunction>), // 直接包含LoxFunction
 }
 #[derive(Debug, Clone)]
 pub struct Token {
