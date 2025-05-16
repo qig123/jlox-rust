@@ -21,17 +21,17 @@ impl Interpreter {
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<Object, RuntimeError> {
         // println!("{:?}", statements);
         for stmt in statements {
-            self.interpret_stmt(stmt)?;
+            self.interpret_stmt(&stmt)?;
         }
         Ok(Object::NULL)
     }
 
-    pub fn interpret_expr(&mut self, expr: Expr) -> Result<Object, RuntimeError> {
+    pub fn interpret_expr(&mut self, expr: &Expr) -> Result<Object, RuntimeError> {
         match expr {
-            Expr::Literal(value) => Ok(value),
-            Expr::Grouping(expr) => self.interpret_expr(*expr),
+            Expr::Literal(value) => Ok(value.clone()),
+            Expr::Grouping(expr) => self.interpret_expr(expr),
             Expr::Unary { operator, right } => {
-                let right = self.interpret_expr(*right)?;
+                let right = self.interpret_expr(right)?;
                 match operator.token_type {
                     TokenType::Minus => {
                         if let Object::Number(value) = right {
@@ -55,8 +55,8 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.interpret_expr(*left)?;
-                let right = self.interpret_expr(*right)?;
+                let left = self.interpret_expr(left)?;
+                let right = self.interpret_expr(right)?;
                 match operator.token_type {
                     TokenType::Plus => {
                         // 处理数字相加或字符串连接
@@ -151,10 +151,10 @@ impl Interpreter {
                     }
                 }
             }
-            Expr::Variable(name) => self.environment.get(name),
+            Expr::Variable(name) => self.environment.get(name.clone()),
             Expr::Assign { name, value } => {
-                let value = self.interpret_expr(*value)?;
-                self.environment.assign(name, &value)?;
+                let value = self.interpret_expr(value)?;
+                self.environment.assign(name.clone(), &value)?;
                 Ok(value) // 返回值无意义
             }
             Expr::Logical {
@@ -162,7 +162,7 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.interpret_expr(*left)?;
+                let left = self.interpret_expr(left)?;
                 // println!("左边:{:?}", left);
                 match operator.token_type {
                     TokenType::Or => {
@@ -177,11 +177,11 @@ impl Interpreter {
                     }
                 }
                 // println!("右边:{:?}", *right);
-                self.interpret_expr(*right)
+                self.interpret_expr(right)
             }
         }
     }
-    pub fn interpret_stmt(&mut self, stmt: Stmt) -> Result<Object, RuntimeError> {
+    pub fn interpret_stmt(&mut self, stmt: &Stmt) -> Result<Object, RuntimeError> {
         match stmt {
             Stmt::Expression(expr) => self.interpret_expr(expr),
             Stmt::Print(expr) => {
@@ -194,15 +194,11 @@ impl Interpreter {
                     Some(expr) => self.interpret_expr(expr)?,
                     None => Object::NULL,
                 };
-                self.environment.define(name.lexeme, value);
+                self.environment.define(name.lexeme.clone(), value);
                 Ok(Object::NULL)
             }
             Stmt::Block(stmts) => {
-                self.environment.enter_child_scope();
-                for s in stmts {
-                    let _ = self.interpret_stmt(s);
-                }
-                self.environment.exit_scope();
+                self.execute_block(stmts);
                 Ok(Object::NULL)
             }
             Stmt::If {
@@ -212,20 +208,38 @@ impl Interpreter {
             } => {
                 let c = self.interpret_expr(condition)?;
                 if Self::is_truthy(&c) {
-                    self.interpret_stmt(*then_branch)?;
+                    self.interpret_stmt(&*then_branch)?;
                 } else {
                     match else_branch {
                         Some(e) => {
-                            self.interpret_stmt(*e)?;
+                            self.interpret_stmt(&*e)?;
                         }
                         None => {}
                     }
                 }
                 Ok(Object::NULL)
             }
+            Stmt::While { condition, body } => {
+                // 只在循环开始前创建一个新的作用域
+                self.environment.enter_child_scope();
+                // 循环条件检查
+                while Self::is_truthy(&self.interpret_expr(condition)?) {
+                    // 执行循环体
+                    self.interpret_stmt(body)?;
+                }
+                // 循环结束后退出作用域
+                self.environment.exit_scope();
+                Ok(Object::NULL)
+            }
         }
     }
-
+    fn execute_block(&mut self, stmts: &Vec<Stmt>) {
+        self.environment.enter_child_scope();
+        for s in stmts {
+            let _ = self.interpret_stmt(s);
+        }
+        self.environment.exit_scope();
+    }
     // 辅助函数：判断一个值是否为真
     fn is_truthy(obj: &Object) -> bool {
         match obj {
