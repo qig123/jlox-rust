@@ -1,5 +1,5 @@
 use crate::{
-    environment::{Environment, EnvironmentTree},
+    environment::EnvironmentTree,
     expr::{Expr, Stmt},
     token::Object,
     token_type::TokenType,
@@ -19,6 +19,7 @@ impl Interpreter {
         }
     }
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<Object, RuntimeError> {
+        // println!("{:?}", statements);
         for stmt in statements {
             self.interpret_stmt(stmt)?;
         }
@@ -156,6 +157,28 @@ impl Interpreter {
                 self.environment.assign(name, &value)?;
                 Ok(value) // 返回值无意义
             }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.interpret_expr(*left)?;
+                // println!("左边:{:?}", left);
+                match operator.token_type {
+                    TokenType::Or => {
+                        if Self::is_truthy(&left) {
+                            return Ok(left);
+                        }
+                    }
+                    _ => {
+                        if !Self::is_truthy(&left) {
+                            return Ok(left);
+                        }
+                    }
+                }
+                // println!("右边:{:?}", *right);
+                self.interpret_expr(*right)
+            }
         }
     }
     pub fn interpret_stmt(&mut self, stmt: Stmt) -> Result<Object, RuntimeError> {
@@ -174,8 +197,35 @@ impl Interpreter {
                 self.environment.define(name.lexeme, value);
                 Ok(Object::NULL)
             }
+            Stmt::Block(stmts) => {
+                self.environment.enter_child_scope();
+                for s in stmts {
+                    let _ = self.interpret_stmt(s);
+                }
+                self.environment.exit_scope();
+                Ok(Object::NULL)
+            }
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let c = self.interpret_expr(condition)?;
+                if Self::is_truthy(&c) {
+                    self.interpret_stmt(*then_branch)?;
+                } else {
+                    match else_branch {
+                        Some(e) => {
+                            self.interpret_stmt(*e)?;
+                        }
+                        None => {}
+                    }
+                }
+                Ok(Object::NULL)
+            }
         }
     }
+
     // 辅助函数：判断一个值是否为真
     fn is_truthy(obj: &Object) -> bool {
         match obj {

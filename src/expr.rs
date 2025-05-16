@@ -18,6 +18,11 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
 }
 #[derive(Debug)]
 pub enum Stmt {
@@ -26,5 +31,11 @@ pub enum Stmt {
     Var {
         name: Token,
         initializer: Option<Expr>,
+    },
+    Block(Vec<Stmt>),
+    If {
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Option<Box<Stmt>>,
     },
 }

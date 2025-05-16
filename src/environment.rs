@@ -66,7 +66,7 @@ impl EnvironmentTree {
         })
     }
     /// 进入一个新的子作用域
-    fn enter_child_scope(&mut self) {
+    pub fn enter_child_scope(&mut self) {
         let child = self.arena.new_node(Environment {
             values: HashMap::new(),
         });
@@ -75,7 +75,7 @@ impl EnvironmentTree {
     }
 
     /// 回到父作用域
-    fn exit_scope(&mut self) {
+    pub fn exit_scope(&mut self) {
         if let Some(parent) = self.current.ancestors(&self.arena).nth(1) {
             self.current = parent;
         }

@@ -1,5 +1,2 @@
-var temperature = 25;
-
-if (temperature > 30) {
-  print("It's hot outside!");
-} 
+print "hi" or 2; // "hi".
+print nil or "yes"; // "yes".
