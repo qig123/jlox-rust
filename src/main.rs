@@ -13,8 +13,8 @@ mod scanner;
 mod token;
 mod token_type;
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    //let args: Vec<&'static str> = vec!["name", r"./test.lox"]; //这行是测试代码
+    //let args: Vec<String> = env::args().collect();
+    let args: Vec<&'static str> = vec!["name", r"./test.lox"]; //这行是测试代码
     match args.len() {
         2 => {
             run_file(args[1].to_string());
@@ -35,12 +35,7 @@ fn run(source: String) {
         Ok(tokens) => {
             let mut parser = Parser::new(tokens, source); // Pass source to parser
             match parser.parse() {
-                Ok(expr) => match Interpreter::new().interpret(expr) {
-                    Ok(_obj) => {}
-                    Err(e) => {
-                        eprintln!("Runtime error: {} at line {}", e.message, e.line)
-                    }
-                },
+                Ok(expr) => Interpreter::new().interpret(expr),
                 Err(_e) => {
                     //语法分析出现错误，简单退出进程
                     std::process::exit(65);

@@ -41,22 +41,25 @@ impl LoxCallable for LoxFunction {
                     .ok_or_else(|| RuntimeError {
                         message: format!("Missing argument for '{}'", param.lexeme),
                         line: param.line,
+                        value: None,
                     })?
                     .clone(),
             );
         }
-
-        // 3. 执行函数体
-        let mut result = Object::NULL;
-        for stmt in self.body.iter() {
-            result = interpreter.interpret_stmt(stmt)?;
-        }
-
-        // 4. 退出作用域
+        // 执行函数体
+        let result = interpreter.execute_block(&self.body);
         interpreter.environment.exit_scope();
 
-        // 5. 返回最后一个表达式的结果
-        Ok(result)
+        match result {
+            Ok(value) => Ok(value), // 有 return 值
+            Err(e) => {
+                if e.value.is_some() {
+                    Ok(e.value.unwrap()) // return 传播的错误
+                } else {
+                    Err(e) // 真正的错误
+                }
+            }
+        }
     }
 
     fn arity(&self) -> usize {

@@ -43,6 +43,7 @@ impl EnvironmentTree {
         Err(RuntimeError {
             message: format!("Undefined variable '{}'", name.lexeme),
             line: name.line,
+            value: None,
         })
     }
     pub fn assign(&mut self, name: Token, value: &Object) -> Result<(), RuntimeError> {
@@ -63,6 +64,7 @@ impl EnvironmentTree {
         Err(RuntimeError {
             message: format!("Undefined variable '{}'", name.lexeme),
             line: name.line,
+            value: None,
         })
     }
     /// 进入一个新的子作用域

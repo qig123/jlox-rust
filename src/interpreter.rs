@@ -9,7 +9,9 @@ use crate::{
 pub struct RuntimeError {
     pub message: String,
     pub line: usize,
+    pub value: Option<Object>,
 }
+
 pub struct Interpreter {
     pub environment: EnvironmentTree,
 }
@@ -19,12 +21,20 @@ impl Interpreter {
             environment: EnvironmentTree::new(),
         }
     }
-    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<Object, RuntimeError> {
+    pub fn interpret(&mut self, statements: Vec<Stmt>) {
         // println!("{:?}", statements);
         for stmt in statements {
-            self.interpret_stmt(&stmt)?;
+            let r = self.interpret_stmt(&stmt);
+            match r {
+                Ok(_e) => {}
+                Err(e) => match e.value {
+                    Some(_v) => {}
+                    None => {
+                        eprintln!("Runtime error: {} at line {}", e.message, e.line)
+                    }
+                },
+            }
         }
-        Ok(Object::NULL)
     }
 
     pub fn interpret_expr(&mut self, expr: &Expr) -> Result<Object, RuntimeError> {
@@ -41,6 +51,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be a number".to_string(),
                                 line: operator.line,
+                                value: None,
                             })
                         }
                     }
@@ -48,6 +59,7 @@ impl Interpreter {
                     _ => Err(RuntimeError {
                         message: "Operands must be a number".to_string(),
                         line: operator.line,
+                        value: None,
                     }),
                 }
             }
@@ -69,6 +81,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be two numbers or two strings".to_string(),
                                 line: operator.line,
+                                value: None,
                             }) //"Operands must be two numbers or two strings"
                         }
                     }
@@ -79,6 +92,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be two numbers".to_string(),
                                 line: operator.line,
+                                value: None,
                             }) //"Operands must be two numbers"
                         }
                     }
@@ -89,6 +103,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be two numbers".to_string(),
                                 line: operator.line,
+                                value: None,
                             }) //"Operands must be two numbers"
                         }
                     }
@@ -99,6 +114,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be two numbers".to_string(),
                                 line: operator.line,
+                                value: None,
                             }) //"Operands must be two numbers"
                         }
                     }
@@ -109,6 +125,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be two numbers".to_string(),
                                 line: operator.line,
+                                value: None,
                             }) //"Operands must be two numbers"
                         }
                     }
@@ -119,6 +136,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be two numbers".to_string(),
                                 line: 0,
+                                value: None,
                             }) //"Operands must be two numbers"
                         }
                     }
@@ -129,6 +147,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be two numbers".to_string(),
                                 line: operator.line,
+                                value: None,
                             }) //"Operands must be two numbers"
                         }
                     }
@@ -139,6 +158,7 @@ impl Interpreter {
                             Err(RuntimeError {
                                 message: "Operands must be two numbers".to_string(),
                                 line: operator.line,
+                                value: None,
                             }) //"Operands must be two numbers"
                         }
                     }
@@ -148,6 +168,7 @@ impl Interpreter {
                         Err(RuntimeError {
                             message: "Operands must be two numbers".to_string(),
                             line: operator.line,
+                            value: None,
                         }) //"Operands must be two numbers"
                     }
                 }
@@ -206,6 +227,7 @@ impl Interpreter {
                                     args.len()
                                 ),
                                 line: paren.line,
+                                value: None,
                             });
                         }
                         f.call(self, args)
@@ -213,6 +235,7 @@ impl Interpreter {
                     _ => Err(RuntimeError {
                         message: "Can only call functions and classes.".to_string(),
                         line: paren.line,
+                        value: None,
                     }),
                 }
             }
@@ -235,7 +258,7 @@ impl Interpreter {
                 Ok(Object::NULL)
             }
             Stmt::Block(stmts) => {
-                self.execute_block(stmts);
+                self.execute_block(stmts)?;
                 Ok(Object::NULL)
             }
             Stmt::If {
@@ -276,14 +299,41 @@ impl Interpreter {
                     .define(name.lexeme.clone(), Object::LoxFunction(Box::new(f)));
                 Ok(Object::NULL)
             }
+            Stmt::Return { keyword, value } => {
+                let value_re;
+                match value {
+                    Some(e) => {
+                        value_re = Some(self.interpret_expr(e)?);
+                    }
+                    None => {
+                        value_re = None;
+                    }
+                }
+                //println!("return的值是 {:?}", value_re);
+                return Err(RuntimeError {
+                    message: "".to_string(),
+                    line: 0,
+                    value: value_re,
+                });
+            }
         }
     }
-    pub fn execute_block(&mut self, stmts: &Vec<Stmt>) {
+    pub fn execute_block(&mut self, stmts: &[Stmt]) -> Result<Object, RuntimeError> {
         self.environment.enter_child_scope();
-        for s in stmts {
-            let _ = self.interpret_stmt(s);
+
+        for stmt in stmts {
+            // println!("当前执行语句{:?}", stmt);
+            match self.interpret_stmt(stmt) {
+                Ok(_) => continue,
+                Err(e) => {
+                    //这个e有可能带return
+                    self.environment.exit_scope();
+                    return Err(e);
+                }
+            }
         }
         self.environment.exit_scope();
+        Ok(Object::NULL)
     }
     // 辅助函数：判断一个值是否为真
     fn is_truthy(obj: &Object) -> bool {
