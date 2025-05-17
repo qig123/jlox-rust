@@ -1,3 +1,5 @@
+use indextree::NodeId;
+
 use crate::{
     expr::Stmt,
     interpreter::{Interpreter, RuntimeError},
@@ -15,11 +17,16 @@ pub trait LoxCallable {
 pub struct LoxFunction {
     pub params: Vec<Token>,
     pub body: Box<Vec<Stmt>>,
+    pub closure_env: NodeId, // 只保存闭包创建时的环境节点ID
 }
 
 impl LoxFunction {
-    pub fn new(p: Vec<Token>, b: Box<Vec<Stmt>>) -> Self {
-        Self { params: p, body: b }
+    pub fn new(p: Vec<Token>, b: Box<Vec<Stmt>>, closure_env: NodeId) -> Self {
+        Self {
+            params: p,
+            body: b,
+            closure_env, // 存储闭包创建时的环境节点
+        }
     }
 }
 
@@ -30,6 +37,13 @@ impl LoxCallable for LoxFunction {
         arguments: Vec<Object>,
     ) -> Result<Object, RuntimeError> {
         // 1. 进入新作用域
+        // 保存旧环境
+        let old_env = interpreter.environment.current;
+
+        // 切换到闭包环境（使用解释器原有的 arena）
+        interpreter.environment.current = self.closure_env;
+
+        // 进入新作用域（在闭包环境的基础上）
         interpreter.environment.enter_child_scope();
 
         // 2. 绑定参数
@@ -48,7 +62,9 @@ impl LoxCallable for LoxFunction {
         }
         // 执行函数体
         let result = interpreter.execute_block(&self.body);
+
         interpreter.environment.exit_scope();
+        interpreter.environment.current = old_env;
 
         match result {
             Ok(value) => Ok(value), // 有 return 值

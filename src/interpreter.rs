@@ -292,9 +292,11 @@ impl Interpreter {
                 Ok(Object::NULL)
             }
             Stmt::Function { name, params, body } => {
-                // 解析时创建FunctionDecl
-                let f = LoxFunction::new(params.clone(), body.clone());
-
+                let f = LoxFunction::new(
+                    params.clone(),
+                    body.clone(),
+                    self.environment.current, // 只保存当前环境节点ID
+                );
                 self.environment
                     .define(name.lexeme.clone(), Object::LoxFunction(Box::new(f)));
                 Ok(Object::NULL)

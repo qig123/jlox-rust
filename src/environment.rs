@@ -13,7 +13,7 @@ pub struct Environment {
 #[derive(Debug)]
 pub struct EnvironmentTree {
     arena: Arena<Environment>,
-    current: NodeId,
+    pub current: NodeId,
 }
 impl EnvironmentTree {
     pub fn new() -> Self {

@@ -1,13 +1,21 @@
-fun makeCounter() {
-  var i = 0;
-  fun count() {
-    i = i + 1;
-    print i;
-  }
+// 银行账户闭包测试（最简版本）
+var accountBalance = 0;
 
-  return count;
+fun makeDeposit(amount) {
+    accountBalance = accountBalance + amount;
+    return accountBalance;
 }
 
-var counter = makeCounter();
-counter(); // "1".
-counter(); // "2".
+fun makeWithdraw(amount) {
+    if (amount > accountBalance) {
+        print "Insufficient funds!";
+        return accountBalance;
+    }
+    accountBalance = accountBalance - amount;
+    return accountBalance;
+}
+
+// 测试
+print makeDeposit(100); // 输出: 100
+print makeWithdraw(30); // 输出: 70
+print makeWithdraw(80); // 先输出 "Insufficient funds!" 然后输出 70
